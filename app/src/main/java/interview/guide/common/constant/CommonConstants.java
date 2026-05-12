@@ -28,7 +28,17 @@ public final class CommonConstants {
         public static final int DEFAULT_PAGE = 1;
         public static final int DEFAULT_SIZE = 20;
         public static final int MAX_SIZE = 100;
-        
+
         private Pagination() {}
+    }
+
+    /**
+     * 面试默认值
+     */
+    public static final class InterviewDefaults {
+        public static final String SKILL_ID = "java-backend";
+        public static final String DIFFICULTY = "mid";
+
+        private InterviewDefaults() {}
     }
 }

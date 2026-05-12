@@ -48,17 +48,13 @@ public class PdfExportService {
      * 创建支持中文的字体
      */
     private PdfFont createChineseFont() {
-        try {
-            // 使用项目内嵌字体（保证跨平台一致性）
-            var fontStream = getClass().getClassLoader().getResourceAsStream("fonts/ZhuqueFangsong-Regular.ttf");
+        try (var fontStream = getClass().getClassLoader().getResourceAsStream("fonts/ZhuqueFangsong-Regular.ttf")) {
             if (fontStream != null) {
                 byte[] fontBytes = fontStream.readAllBytes();
-                fontStream.close();
                 log.debug("使用项目内嵌字体: fonts/ZhuqueFangsong-Regular.ttf");
                 return PdfFontFactory.createFont(fontBytes, PdfEncodings.IDENTITY_H, EmbeddingStrategy.FORCE_EMBEDDED);
             }
-            
-            // 如果字体文件不存在，抛出异常
+
             log.error("未找到字体文件: fonts/ZhuqueFangsong-Regular.ttf");
             throw new BusinessException(ErrorCode.EXPORT_PDF_FAILED, "字体文件缺失，请联系管理员");
             
@@ -229,7 +225,7 @@ public class PdfExportService {
                     }
                 }
             } catch (Exception e) {
-                log.error("解析优势JSON失败", e);
+                log.error("解析优势JSON失败: sessionId={}", session.getSessionId(), e);
             }
         }
         
@@ -247,7 +243,7 @@ public class PdfExportService {
                     }
                 }
             } catch (Exception e) {
-                log.error("解析改进建议JSON失败", e);
+                log.error("解析改进建议JSON失败: sessionId={}", session.getSessionId(), e);
             }
         }
         

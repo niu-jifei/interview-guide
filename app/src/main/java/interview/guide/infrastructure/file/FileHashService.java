@@ -32,7 +32,7 @@ public class FileHashService {
         try {
             return calculateHash(file.getBytes());
         } catch (IOException e) {
-            log.error("读取文件内容失败: {}", e.getMessage());
+            log.error("读取文件内容失败", e);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "计算文件哈希失败");
         }
     }
@@ -49,7 +49,7 @@ public class FileHashService {
             byte[] hashBytes = digest.digest(data);
             return bytesToHex(hashBytes);
         } catch (NoSuchAlgorithmException e) {
-            log.error("哈希算法不支持: {}", HASH_ALGORITHM);
+            log.error("哈希算法不支持: {}", HASH_ALGORITHM, e);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "计算文件哈希失败");
         }
     }
@@ -70,7 +70,7 @@ public class FileHashService {
             }
             return bytesToHex(digest.digest());
         } catch (NoSuchAlgorithmException | IOException e) {
-            log.error("计算文件哈希失败: {}", e.getMessage());
+            log.error("计算文件哈希失败", e);
             throw new BusinessException(ErrorCode.INTERNAL_ERROR, "计算文件哈希失败");
         }
     }

@@ -5,6 +5,7 @@ import interview.guide.common.exception.ErrorCode;
 import interview.guide.infrastructure.export.PdfExportService;
 import interview.guide.infrastructure.mapper.InterviewMapper;
 import interview.guide.infrastructure.mapper.ResumeMapper;
+import interview.guide.modules.interview.model.InterviewHistoryItemDTO;
 import interview.guide.modules.interview.model.ResumeAnalysisResponse;
 import interview.guide.modules.interview.service.InterviewPersistenceService;
 import interview.guide.modules.resume.model.ResumeAnalysisEntity;
@@ -18,6 +19,7 @@ import tools.jackson.core.JacksonException;
 import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -46,7 +48,7 @@ public class ResumeHistoryService {
         return resumes.stream().map(resume -> {
             // 获取最新分析结果的分数
             Integer latestScore = null;
-            java.time.LocalDateTime lastAnalyzedAt = null;
+            LocalDateTime lastAnalyzedAt = null;
             Optional<ResumeAnalysisEntity> analysisOpt = resumePersistenceService.getLatestAnalysis(resume.getId());
             if (analysisOpt.isPresent()) {
                 ResumeAnalysisEntity analysis = analysisOpt.get();
@@ -66,7 +68,9 @@ public class ResumeHistoryService {
                 resume.getAccessCount(),
                 latestScore,
                 lastAnalyzedAt,
-                interviewCount
+                interviewCount,
+                resume.getAnalyzeStatus(),
+                resume.getAnalyzeError()
             );
         }).toList();
     }
@@ -91,7 +95,7 @@ public class ResumeHistoryService {
         );
 
         // 使用 InterviewMapper 转换面试历史
-        List<Object> interviewHistory = interviewMapper.toInterviewHistoryList(
+        List<InterviewHistoryItemDTO> interviewHistory = interviewMapper.toInterviewHistoryList(
             interviewPersistenceService.findByResumeId(id)
         );
 

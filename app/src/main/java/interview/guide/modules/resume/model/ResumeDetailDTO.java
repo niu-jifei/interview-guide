@@ -1,6 +1,7 @@
 package interview.guide.modules.resume.model;
 
 import interview.guide.common.model.AsyncTaskStatus;
+import interview.guide.modules.interview.model.InterviewHistoryItemDTO;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -20,7 +21,7 @@ public record ResumeDetailDTO(
     AsyncTaskStatus analyzeStatus,
     String analyzeError,
     List<AnalysisHistoryDTO> analyses,
-    List<Object> interviews  // 面试历史由InterviewHistoryService提供
+    List<InterviewHistoryItemDTO> interviews
 ) {
     /**
      * 分析历史DTO

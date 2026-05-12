@@ -83,6 +83,8 @@ public class FileStorageService {
         }
     }
 
+    private static final DateTimeFormatter DATE_PATH_FORMAT = DateTimeFormatter.ofPattern("yyyy/MM/dd");
+
     /**
      * 通用文件上传方法
      */
@@ -205,7 +207,7 @@ public class FileStorageService {
      */
     private String generateFileKey(String originalFilename, String prefix) {
         LocalDateTime now = LocalDateTime.now();
-        String datePath = now.format(DateTimeFormatter.ofPattern("yyyy/MM/dd"));
+        String datePath = now.format(DATE_PATH_FORMAT);
         String uuid = UUID.randomUUID().toString().substring(0, 8);
         String safeName = sanitizeFilename(originalFilename);
         return String.format("%s/%s/%s_%s", prefix, datePath, uuid, safeName);

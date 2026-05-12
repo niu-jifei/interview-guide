@@ -2,11 +2,13 @@ package interview.guide.infrastructure.mapper;
 
 import interview.guide.modules.interview.model.InterviewAnswerEntity;
 import interview.guide.modules.interview.model.InterviewDetailDTO;
+import interview.guide.modules.interview.model.InterviewHistoryItemDTO;
 import interview.guide.modules.interview.model.InterviewReportDTO;
 import interview.guide.modules.interview.model.InterviewSessionEntity;
 import org.mapstruct.*;
 
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 面试相关的对象映射器
@@ -52,7 +54,7 @@ public interface InterviewMapper {
      */
     default List<InterviewDetailDTO.AnswerDetailDTO> toAnswerDetailDTOList(
         List<InterviewAnswerEntity> entities,
-        java.util.function.Function<InterviewAnswerEntity, List<String>> keyPointsExtractor
+        Function<InterviewAnswerEntity, List<String>> keyPointsExtractor
     ) {
         return entities.stream()
             .map(e -> toAnswerDetailDTO(e, keyPointsExtractor.apply(e)))
@@ -106,30 +108,28 @@ public interface InterviewMapper {
     // ========== 面试历史列表项映射 ==========
 
     /**
-     * InterviewSessionEntity 转换为简要信息 Map
-     * 用于 ResumeDetailDTO 中的面试历史列表
+     * InterviewSessionEntity 转换为面试历史列表项 DTO
      */
-    default java.util.Map<String, Object> toInterviewHistoryItem(InterviewSessionEntity session) {
-        java.util.Map<String, Object> map = new java.util.LinkedHashMap<>();
-        map.put("id", session.getId());
-        map.put("sessionId", session.getSessionId());
-        map.put("totalQuestions", session.getTotalQuestions());
-        map.put("status", session.getStatus().toString());
-        map.put("evaluateStatus", session.getEvaluateStatus() != null ? session.getEvaluateStatus().name() : null);
-        map.put("evaluateError", session.getEvaluateError());
-        map.put("overallScore", session.getOverallScore());
-        map.put("createdAt", session.getCreatedAt());
-        map.put("completedAt", session.getCompletedAt());
-        return map;
+    default InterviewHistoryItemDTO toInterviewHistoryItem(InterviewSessionEntity session) {
+        return new InterviewHistoryItemDTO(
+            session.getId(),
+            session.getSessionId(),
+            session.getTotalQuestions(),
+            session.getStatus().toString(),
+            session.getEvaluateStatus() != null ? session.getEvaluateStatus().name() : null,
+            session.getEvaluateError(),
+            session.getOverallScore(),
+            session.getCreatedAt(),
+            session.getCompletedAt()
+        );
     }
 
     /**
      * 批量转换面试历史
      */
-    default List<Object> toInterviewHistoryList(List<InterviewSessionEntity> sessions) {
+    default List<InterviewHistoryItemDTO> toInterviewHistoryList(List<InterviewSessionEntity> sessions) {
         return sessions.stream()
             .map(this::toInterviewHistoryItem)
-            .map(m -> (Object) m)
             .toList();
     }
 

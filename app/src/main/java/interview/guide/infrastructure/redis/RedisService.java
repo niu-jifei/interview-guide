@@ -1,8 +1,17 @@
 package interview.guide.infrastructure.redis;
 
+import interview.guide.common.exception.BusinessException;
+import interview.guide.common.exception.ErrorCode;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.*;
+import org.redisson.api.RAtomicLong;
+import org.redisson.api.RBucket;
+import org.redisson.api.RKeys;
+import org.redisson.api.RList;
+import org.redisson.api.RLock;
+import org.redisson.api.RMap;
+import org.redisson.api.RStream;
+import org.redisson.api.RedissonClient;
 import org.redisson.api.options.KeysScanOptions;
 import org.redisson.api.stream.StreamAddArgs;
 import org.redisson.api.stream.StreamCreateGroupArgs;
@@ -185,10 +194,10 @@ public class RedisService {
                     lock.unlock();
                 }
             }
-            throw new RuntimeException("获取锁失败: " + lockKey);
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取锁失败: " + lockKey);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
-            throw new RuntimeException("获取锁被中断: " + lockKey, e);
+            throw new BusinessException(ErrorCode.INTERNAL_ERROR, "获取锁被中断: " + lockKey, e);
         }
     }
 
@@ -266,9 +275,12 @@ public class RedisService {
             log.info("创建 Stream 消费者组: stream={}, group={}", streamKey, groupName);
         } catch (Exception e) {
             // 组已存在，忽略
-            if (!e.getMessage().contains("BUSYGROUP")) {
-                log.warn("创建消费者组失败: {}", e.getMessage());
+            if (e instanceof org.redisson.client.RedisException
+                    && e.getMessage() != null
+                    && e.getMessage().contains("BUSYGROUP")) {
+                return;
             }
+            log.warn("创建消费者组失败: stream={}, group={}, error={}", streamKey, groupName, e.getMessage());
         }
     }
 

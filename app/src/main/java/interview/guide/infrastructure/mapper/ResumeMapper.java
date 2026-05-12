@@ -7,7 +7,9 @@ import interview.guide.modules.resume.model.ResumeEntity;
 import interview.guide.modules.resume.model.ResumeListItemDTO;
 import org.mapstruct.*;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 简历相关的对象映射器
@@ -39,7 +41,7 @@ public interface ResumeMapper {
     default ResumeListItemDTO toListItemDTO(
         ResumeEntity resume,
         Integer latestScore,
-        java.time.LocalDateTime lastAnalyzedAt,
+        LocalDateTime lastAnalyzedAt,
         Integer interviewCount
     ) {
         return new ResumeListItemDTO(
@@ -50,7 +52,9 @@ public interface ResumeMapper {
             resume.getAccessCount(),
             latestScore,
             lastAnalyzedAt,
-            interviewCount
+            interviewCount,
+            null,
+            null
         );
     }
 
@@ -92,8 +96,8 @@ public interface ResumeMapper {
      */
     default List<ResumeDetailDTO.AnalysisHistoryDTO> toAnalysisHistoryDTOList(
         List<ResumeAnalysisEntity> entities,
-        java.util.function.Function<ResumeAnalysisEntity, List<String>> strengthsExtractor,
-        java.util.function.Function<ResumeAnalysisEntity, List<Object>> suggestionsExtractor
+        Function<ResumeAnalysisEntity, List<String>> strengthsExtractor,
+        Function<ResumeAnalysisEntity, List<Object>> suggestionsExtractor
     ) {
         return entities.stream()
             .map(e -> toAnalysisHistoryDTO(e, strengthsExtractor.apply(e), suggestionsExtractor.apply(e)))

@@ -1,5 +1,6 @@
 package interview.guide.modules.resume.service;
 
+import interview.guide.common.ai.LlmProviderRegistry;
 import interview.guide.common.ai.StructuredOutputInvoker;
 import interview.guide.common.exception.BusinessException;
 import interview.guide.common.exception.ErrorCode;
@@ -11,8 +12,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.ai.chat.client.ChatClient;
 import org.springframework.ai.chat.prompt.PromptTemplate;
 import org.springframework.ai.converter.BeanOutputConverter;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.Resource;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -30,7 +30,7 @@ public class ResumeGradingService {
     
     private static final Logger log = LoggerFactory.getLogger(ResumeGradingService.class);
     
-    private final ChatClient chatClient;
+    private final LlmProviderRegistry llmProviderRegistry;
     private final PromptTemplate systemPromptTemplate;
     private final PromptTemplate userPromptTemplate;
     private final BeanOutputConverter<ResumeAnalysisResponseDTO> outputConverter;
@@ -61,14 +61,20 @@ public class ResumeGradingService {
     ) {}
     
     public ResumeGradingService(
-            ChatClient.Builder chatClientBuilder,
+            LlmProviderRegistry llmProviderRegistry,
             StructuredOutputInvoker structuredOutputInvoker,
-            @Value("classpath:prompts/resume-analysis-system.st") Resource systemPromptResource,
-            @Value("classpath:prompts/resume-analysis-user.st") Resource userPromptResource) throws IOException {
-        this.chatClient = chatClientBuilder.build();
+            ResumeAnalysisProperties properties,
+            ResourceLoader resourceLoader) throws IOException {
+        this.llmProviderRegistry = llmProviderRegistry;
         this.structuredOutputInvoker = structuredOutputInvoker;
-        this.systemPromptTemplate = new PromptTemplate(systemPromptResource.getContentAsString(StandardCharsets.UTF_8));
-        this.userPromptTemplate = new PromptTemplate(userPromptResource.getContentAsString(StandardCharsets.UTF_8));
+        this.systemPromptTemplate = new PromptTemplate(
+            resourceLoader.getResource(properties.getSystemPromptPath())
+                .getContentAsString(StandardCharsets.UTF_8)
+        );
+        this.userPromptTemplate = new PromptTemplate(
+            resourceLoader.getResource(properties.getUserPromptPath())
+                .getContentAsString(StandardCharsets.UTF_8)
+        );
         this.outputConverter = new BeanOutputConverter<>(ResumeAnalysisResponseDTO.class);
     }
     
@@ -96,6 +102,7 @@ public class ResumeGradingService {
             // 调用AI
             ResumeAnalysisResponseDTO dto;
             try {
+                ChatClient chatClient = llmProviderRegistry.getDefaultChatClient();
                 dto = structuredOutputInvoker.invoke(
                     chatClient,
                     systemPromptWithFormat,
