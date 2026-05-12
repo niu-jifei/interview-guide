@@ -3,7 +3,7 @@
 
 # Ignore Gradle build output directory
 build
-/.claude
+#/.claude
 /.idea
 /app/bin
 # Environment variables
