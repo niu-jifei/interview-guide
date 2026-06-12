@@ -19,6 +19,9 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public abstract class AbstractStreamConsumer<T> {
 
     private final RedisService redisService;
+    /**
+     * 消费者是否运行中
+     */
     private final AtomicBoolean running = new AtomicBoolean(false);
     private ExecutorService executorService;
     private String consumerName;
@@ -58,6 +61,9 @@ public abstract class AbstractStreamConsumer<T> {
         log.info("{} consumer stopped: consumerName={}", taskDisplayName(), consumerName);
     }
 
+    /**
+     * 启动消费者线程并准备Redis Stream组
+     */
     private void startConsumer() {
         try {
             redisService.createStreamGroup(streamKey(), groupName());
@@ -69,6 +75,10 @@ public abstract class AbstractStreamConsumer<T> {
         consumeLoop();
     }
 
+    /**
+     * Consumer loop循环消费消息
+     * 循环从Redis Stream中获取消息并处理
+     */
     private void consumeLoop() {
         while (running.get()) {
             try {
@@ -90,6 +100,12 @@ public abstract class AbstractStreamConsumer<T> {
         }
     }
 
+    /**
+     * 处理消息
+     * @param messageId 消息ID
+     * @param messageId
+     * @param data
+     */
     private void processMessage(StreamMessageId messageId, Map<String, String> data) {
         T payload = parsePayload(messageId, data);
         if (payload == null) {
@@ -155,19 +171,56 @@ public abstract class AbstractStreamConsumer<T> {
 
     protected abstract String consumerPrefix();
 
+    /**
+     * 获取消费者线程名称
+     * @return
+     */
     protected abstract String threadName();
 
+    /**
+     * 解析消息负载
+     * @param messageId
+     * @param data
+     * @return
+     */
     protected abstract T parsePayload(StreamMessageId messageId, Map<String, String> data);
 
+    /**
+     * 获取任务标识符
+     * @param payload
+     * @return
+     */
     protected abstract String payloadIdentifier(T payload);
 
+    /**
+     * 标记任务为处理中
+     * @param payload
+     */
     protected abstract void markProcessing(T payload);
 
+    /**
+     * 处理业务逻辑
+     * @param payload
+     */
     protected abstract void processBusiness(T payload);
 
+    /**
+     * 标记任务为完成
+     * @param payload
+     */
     protected abstract void markCompleted(T payload);
 
+    /**
+     * 标记任务为失败
+     * @param payload
+     * @param error
+     */
     protected abstract void markFailed(T payload, String error);
 
+    /**
+     * 重试消息
+     * @param payload
+     * @param retryCount
+     */
     protected abstract void retryMessage(T payload, int retryCount);
 }

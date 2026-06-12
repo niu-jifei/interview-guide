@@ -19,6 +19,10 @@ public abstract class AbstractStreamProducer<T> {
         this.redisService = redisService;
     }
 
+    /**
+     * 发送任务主流程
+     * @param payload
+     */
     protected void sendTask(T payload) {
         try {
             String messageId = redisService.streamAdd(
@@ -35,6 +39,11 @@ public abstract class AbstractStreamProducer<T> {
         }
     }
 
+    /**
+     * 截断错误信息
+     * @param error
+     * @return
+     */
     protected String truncateError(String error) {
         if (error == null) {
             return null;
@@ -42,13 +51,36 @@ public abstract class AbstractStreamProducer<T> {
         return error.length() > 500 ? error.substring(0, 500) : error;
     }
 
+    /**
+     * 任务名称
+     * @return
+     */
     protected abstract String taskDisplayName();
 
+    /**
+     * Stream Key
+     * @return
+     */
     protected abstract String streamKey();
 
+    /**
+     * 构建消息
+     * @param payload
+     * @return
+     */
     protected abstract Map<String, String> buildMessage(T payload);
 
+    /**
+     * 任务负载标识
+     * @param payload
+     * @return
+     */
     protected abstract String payloadIdentifier(T payload);
 
+    /**
+     * 任务发送失败处理
+     * @param payload 任务负载
+     * @param error   错误信息
+     */
     protected abstract void onSendFailed(T payload, String error);
 }

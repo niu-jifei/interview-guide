@@ -40,6 +40,9 @@ public class RateLimitAspect {
     private String luaScriptSha;
     private RScript rScript;
 
+    /**
+     * 静态初始化，加载限流 Lua 脚本
+     */
     static {
         try {
             ClassPathResource resource = new ClassPathResource("scripts/rate_limit_single.lua");
@@ -49,12 +52,27 @@ public class RateLimitAspect {
         }
     }
 
+    /**
+     * 实例初始化，加载限流 Lua 脚本到 Redis Redisson 客户端
+     */
     @jakarta.annotation.PostConstruct
     public void init() {
         rScript = redissonClient.getScript(StringCodec.INSTANCE);
         loadScript();
     }
 
+    /**
+     * 加载限流 Lua 脚本到 Redis Redisson 服务器，获取脚本 SHA1 值
+     *
+     * 将限流 Lua 脚本加载到 Redis 服务器端，并获取其 SHA1 校验和
+     *
+     * 后续通过 evalSha() 使用此 SHA1 引用脚本，避免重复传输脚本内容
+     *
+     * 核心机制：
+     * 性能优化：脚本只需传输一次，后续通过 SHA1 引用执行，减少网络带宽消耗
+     * 原子性保证：Lua 脚本在 Redis 中作为原子操作执行，保证限流逻辑的线程安全
+     * 缓存机制：脚本缓存在 Redis 内存中，提升执行效率
+     */
     private void loadScript() {
         this.luaScriptSha = rScript.scriptLoad(LUA_SCRIPT);
         log.info("限流 Lua 脚本加载完成, SHA1: {}", luaScriptSha);
@@ -89,6 +107,15 @@ public class RateLimitAspect {
         return joinPoint.proceed();
     }
 
+    /**
+     * 执行限流 Lua 脚本
+     * @param key
+     * @param nowMs
+     * @param requestId
+     * @param intervalMs
+     * @param count
+     * @return 0 表示被限流
+     */
     private Long executeRateLimitScript(String key, long nowMs, String requestId, long intervalMs, double count) {
         List<Object> keysList = Collections.singletonList(key);
         Object[] args = {
@@ -125,6 +152,12 @@ public class RateLimitAspect {
         }
     }
 
+    /**
+     * 计算时间间隔的毫秒数
+     * @param interval
+     * @param unit
+     * @return
+     */
     private long calculateIntervalMs(long interval, RateLimit.TimeUnit unit) {
         return switch (unit) {
             case MILLISECONDS -> interval;
@@ -151,6 +184,13 @@ public class RateLimitAspect {
         return null;
     }
 
+    /**
+     * 生成限流键
+     * @param className
+     * @param methodName
+     * @param dimension
+     * @return
+     */
     private String generateKey(String className, String methodName, RateLimit.Dimension dimension) {
         String hashTag = "{" + className + ":" + methodName + "}";
         String keyPrefix = "ratelimit:" + hashTag;
@@ -162,6 +202,14 @@ public class RateLimitAspect {
         };
     }
 
+    /**
+     * 处理限流触发，优先执行降级方法，如果不存在则抛出异常
+     * @param joinPoint
+     * @param rateLimit
+     * @param key
+     * @return
+     * @throws Throwable
+     */
     private Object handleRateLimitExceeded(ProceedingJoinPoint joinPoint, RateLimit rateLimit, String key)
             throws Throwable {
         String methodName = joinPoint.getSignature().getName();
@@ -190,17 +238,25 @@ public class RateLimitAspect {
         throw new RateLimitExceededException("请求过于频繁，请稍后再试");
     }
 
+    /**
+     * 根据名称查找降级方法
+     * @param joinPoint
+     * @param fallbackName
+     * @return
+     */
     private Method findFallbackMethod(ProceedingJoinPoint joinPoint, String fallbackName) {
         Class<?> targetClass = joinPoint.getTarget().getClass();
         MethodSignature signature = (MethodSignature) joinPoint.getSignature();
         Class<?>[] parameterTypes = signature.getParameterTypes();
 
         try {
+            // 尝试查找带参数的降级方法
             Method method = targetClass.getDeclaredMethod(fallbackName, parameterTypes);
             method.setAccessible(true);
             return method;
         } catch (NoSuchMethodException e) {
             try {
+                // 尝试查找无参的降级方法
                 Method method = targetClass.getDeclaredMethod(fallbackName);
                 method.setAccessible(true);
                 return method;
@@ -212,6 +268,10 @@ public class RateLimitAspect {
         }
     }
 
+    /**
+     * 获取客户端 IP 地址
+     * @return
+     */
     private String getClientIp() {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {
@@ -241,6 +301,10 @@ public class RateLimitAspect {
         return ip != null ? ip : "unknown";
     }
 
+    /**
+     * 获取当前用户 ID
+     * @return
+     */
     private String getCurrentUserId() {
         ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
         if (attributes == null) {
