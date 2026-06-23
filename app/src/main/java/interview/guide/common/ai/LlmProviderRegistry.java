@@ -164,6 +164,11 @@ public class LlmProviderRegistry {
         return getEmbeddingModel(resolveDefaultEmbeddingProviderId());
     }
 
+    /**
+     * 创建 ChatClient，根据 provider 配置添加默认的 Advisor
+     * @param providerId
+     * @return
+     */
     private ChatClient createChatClient(String providerId) {
         OpenAiChatModel chatModel = buildChatModel(providerId);
 
@@ -180,6 +185,12 @@ public class LlmProviderRegistry {
         return builder.build();
     }
 
+    /**
+     * 创建不带 SkillsTool 的 ChatClient，用于结构化输出场景（出题、简历评分等）。
+     * 这些场景要求模型一次性返回可解析 JSON，不应混入工具调用消息。
+     * @param providerId
+     * @return
+     */
     private ChatClient createPlainChatClient(String providerId) {
         OpenAiChatModel chatModel = buildChatModel(providerId);
         ChatClient.Builder builder = ChatClient.builder(chatModel);
@@ -307,6 +318,10 @@ public class LlmProviderRegistry {
             .build();
     }
 
+    /**
+     * 创建安全 advisor
+     * @return
+     */
     private Optional<SafeGuardAdvisor> buildSafeGuardAdvisor() {
         AdvisorConfig config = properties.getAdvisors();
         if (config == null || !config.isSafeguardEnabled()) {
@@ -349,6 +364,11 @@ public class LlmProviderRegistry {
                 : properties.getDefaultProvider());
     }
 
+    /**
+     * 加载 provider 配置，优先从数据库加载，如果不存在则从 properties 中加载，如果仍然不存在则抛出异常
+     * @param providerId
+     * @return
+     */
     private ProviderSnapshot loadProviderOrThrow(String providerId) {
         if (providerRepository == null) {
             return loadProviderFromPropertiesOrThrow(providerId);
@@ -368,6 +388,11 @@ public class LlmProviderRegistry {
         );
     }
 
+    /**
+     * 加载 provider 配置，优先从 properties 中加载，如果不存在则抛出异常
+     * @param providerId
+     * @return
+     */
     private ProviderSnapshot loadProviderFromPropertiesOrThrow(String providerId) {
         ProviderConfig config = properties.getProviders().get(providerId);
         if (config == null) {
@@ -392,6 +417,11 @@ public class LlmProviderRegistry {
         return value == null || value.isBlank();
     }
 
+    /**
+     * 获取向量维度，优先使用配置配置，否则使用默认值
+     * @param configuredDimensions
+     * @return
+     */
     private Integer resolveEmbeddingDimensions(Integer configuredDimensions) {
         if (configuredDimensions != null && configuredDimensions > 0) {
             return configuredDimensions;
@@ -399,6 +429,11 @@ public class LlmProviderRegistry {
         return properties.getEmbeddingDimensions();
     }
 
+    /**
+     * 判断模型名是否看起来像一个聊天模型
+     * @param model
+     * @return
+     */
     private boolean looksLikeChatModel(String model) {
         String lower = model.toLowerCase();
         return lower.startsWith("glm-")

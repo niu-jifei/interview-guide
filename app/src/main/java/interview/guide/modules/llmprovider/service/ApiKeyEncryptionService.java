@@ -14,6 +14,9 @@ import javax.crypto.spec.SecretKeySpec;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+/**
+ * Provider API Key 加密服务
+ */
 @Slf4j
 @Service
 public class ApiKeyEncryptionService {
@@ -47,6 +50,11 @@ public class ApiKeyEncryptionService {
     secretKey = new SecretKeySpec(resolveKeyBytes(configuredKey), "AES");
   }
 
+  /**
+   * 加密 Provider API Key
+   * @param plainText
+   * @return
+   */
   public EncryptedValue encrypt(String plainText) {
     try {
       byte[] nonce = new byte[NONCE_BYTES];
@@ -81,6 +89,9 @@ public class ApiKeyEncryptionService {
     }
   }
 
+  /**
+   * 解析 Provider API Key 加密密钥，返回 32 字节的 AES 密钥
+   */
   private byte[] resolveKeyBytes(String configuredKey) {
     String trimmed = configuredKey.trim();
     try {
@@ -94,6 +105,11 @@ public class ApiKeyEncryptionService {
     return sha256(trimmed);
   }
 
+  /**
+   * 使用 SHA-256 算法对给定值进行哈希处理
+   * @param value
+   * @return
+   */
   private byte[] sha256(String value) {
     try {
       return MessageDigest.getInstance("SHA-256")

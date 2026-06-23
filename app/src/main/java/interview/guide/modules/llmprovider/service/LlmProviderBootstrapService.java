@@ -13,6 +13,9 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+/**
+ * LLM提供者初始化服务
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -32,6 +35,11 @@ public class LlmProviderBootstrapService {
     ensureGlobalSetting();
   }
 
+  /**
+   * 初始化LLM提供者
+   *
+   * 从配置文件中读取LLM提供者信息并保存到数据库中
+   */
   private void seedProviders() {
     Map<String, ProviderConfig> providers = properties.getProviders();
     if (providers == null || providers.isEmpty()) {
@@ -67,6 +75,9 @@ public class LlmProviderBootstrapService {
     log.info("Seeded {} LLM providers from application configuration", providerRepository.count());
   }
 
+  /**
+   * 确保全局设置存在，如果不存在则初始化默认值
+   */
   private void ensureGlobalSetting() {
     if (globalSettingRepository.existsById(LlmGlobalSettingEntity.SINGLETON_ID)) {
       return;
@@ -89,6 +100,12 @@ public class LlmProviderBootstrapService {
         defaultChatProvider, defaultEmbeddingProvider);
   }
 
+  /**
+   * 确保提供者存在，如果不存在则初始化默认值
+   * @param preferredProvider
+   * @param fallbackProvider
+   * @return
+   */
   private String resolveExistingProvider(String preferredProvider, String fallbackProvider) {
     if (!isBlank(preferredProvider) && providerRepository.existsById(preferredProvider)) {
       return preferredProvider;
@@ -96,6 +113,12 @@ public class LlmProviderBootstrapService {
     return fallbackProvider;
   }
 
+  /**
+   * 确保嵌入提供者存在，如果不存在则初始化默认值
+   * @param preferredProvider
+   * @param fallbackProvider
+   * @return
+   */
   private String resolveExistingEmbeddingProvider(String preferredProvider, String fallbackProvider) {
     return providerRepository.findById(preferredProvider)
         .filter(this::canProvideEmbedding)
