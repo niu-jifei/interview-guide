@@ -116,7 +116,7 @@ public class ResumeHistoryService {
     }
 
     /**
-     * 从 JSON 提取 strengths
+     * 从 JSON 提取 strengths（优势点）
      */
     private List<String> extractStrengths(ResumeAnalysisEntity entity) {
         try {
