@@ -36,6 +36,9 @@ import java.util.Map;
 
 /**
  * 知识库控制器
+ *
+ * 1. 知识库管理
+ * 2. 知识库查询（单轮无状态）
  */
 @Slf4j
 @RestController

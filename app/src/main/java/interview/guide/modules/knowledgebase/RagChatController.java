@@ -28,6 +28,9 @@ import java.util.List;
 
 /**
  * RAG 聊天控制器
+ *
+ * 1. 会话管理
+ *
  */
 @Slf4j
 @RestController

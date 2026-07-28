@@ -82,10 +82,15 @@ public class KnowledgeBaseVectorService {
     
     /**
      * 基于多个知识库进行相似度搜索
-     * 
+     *
+     * 典型的**两级降级（Graceful Degradation）**设计：数据库前置过滤 → 本地内存过滤 → 抛业务异常。
+     * 1. 先根据知识库ID列表过滤向量搜索结果
+     * 2. 如果过滤后结果为空，回退到本地过滤实现
+     *
      * @param query 查询文本
      * @param knowledgeBaseIds 知识库ID列表（如果为空则搜索所有）
      * @param topK 返回top K个结果
+     * @param minScore 最小相似度阈值（大于等于该值的文档才会被返回）
      * @return 相关文档列表
      */
     public List<Document> similaritySearch(String query, List<Long> knowledgeBaseIds, int topK, double minScore) {
@@ -111,6 +116,7 @@ public class KnowledgeBaseVectorService {
             }
 
             // Apply topK limiting in case VectorStore returns more than requested
+            // 可能 VectorStore 返回的 results 多余请求的 topK
             List<Document> limitedResults = results.stream()
                 .limit(topK)
                 .collect(Collectors.toList());
@@ -124,6 +130,17 @@ public class KnowledgeBaseVectorService {
         }
     }
 
+    /**
+     * 向量相似度搜索的兜底实现
+     *
+     * 1. 先根据问题进行向量搜索
+     * 2. 如果文档不为空，再根据知识库ID列表过滤结果
+     * @param query
+     * @param knowledgeBaseIds
+     * @param topK
+     * @param minScore
+     * @return
+     */
     private List<Document> similaritySearchFallback(String query, List<Long> knowledgeBaseIds, int topK, double minScore) {
         try {
             // 回退检索仍保留 topK/minScore，避免兜底路径引入过多弱相关命中
@@ -158,6 +175,12 @@ public class KnowledgeBaseVectorService {
         }
     }
 
+    /**
+     * 当前文档是否在给定的知识库列表中
+     * @param doc 文档
+     * @param knowledgeBaseIds 知识库ID列表
+     * @return 是否在给定的知识库列表中
+     */
     private boolean isDocInKnowledgeBases(Document doc, List<Long> knowledgeBaseIds) {
         Object kbId = doc.getMetadata().get("kb_id");
         if (kbId == null) {
