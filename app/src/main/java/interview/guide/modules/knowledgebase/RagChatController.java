@@ -133,6 +133,8 @@ public class RagChatController {
             .doOnNext(fullContent::append)
             // 使用 ServerSentEvent 包装，转义换行符避免破坏 SSE 格式
             .map(chunk -> ServerSentEvent.<String>builder()
+                    // 换行符问题。SSE 协议中换行是帧分隔符，data 里的裸 \n 会把一段内容错误地拆成多帧（多行 data:），前端拼接时格式就乱了。
+                    // 所以代码先把 \n/\r 转义成字面量再放进 data，由前端还原。用 builder 显式构造事件，这类控制会更直观。
                 .data(chunk.replace("\n", "\\n").replace("\r", "\\r"))
                 .build())
             .doOnComplete(() -> {

@@ -266,14 +266,22 @@ public class KnowledgeBaseQueryService {
         }
     }
 
+    /**
+     * 构建查询上下文（包含候选查询列表 + 检索参数）
+     * @param originalQuestion 原始问题
+     * @param history 历史对话消息
+     * @return
+     */
     private QueryContext buildQueryContext(String originalQuestion, List<Message> history) {
+        // 1. 规范化原始问题
         String normalizedQuestion = normalizeQuestion(originalQuestion);
+        // 2. 问题改写， 添加候选查询
         String rewrittenQuestion = rewriteQuestion(normalizedQuestion, history);
         Set<String> candidates = new LinkedHashSet<>();
         candidates.add(rewrittenQuestion);
         candidates.add(normalizedQuestion);
 
-        // 解析搜索参数
+        // 3.根据问题长度动态设置搜索参数
         SearchParams searchParams = resolveSearchParams(normalizedQuestion);
         return new QueryContext(normalizedQuestion, new ArrayList<>(candidates), searchParams);
     }
@@ -327,12 +335,12 @@ public class KnowledgeBaseQueryService {
     }
 
     /**
-     * 根据问题的紧凑长度（去除空白后）动态解析向量检索参数（topK + minScore）。
+     * 根据问题的紧凑长度（去除空白后）动态设置向量检索参数（topK + minScore）。
      * <p>
      * 核心思路：问题越短 → 语义信息越少 → 召回越宽松。
      * <ul>
      *   <li>短问题（≤ shortQueryLength，默认 4 字，如"JVM"）：关键词式查询，向量语义模糊、
-     *       相似度普遍偏低，因此多召回（topkShort=20）且降低阈值（minScoreShort=0.25），
+     *       相似度普遍偏低，因此多召回（topkShort=20）且降低阈值（minScoreShort=0.18），
      *       宁可多拿片段让 LLM 筛选，也不漏召回</li>
      *   <li>中问题（≤ 12 字）：topkMedium=12 + minScoreDefault=0.28</li>
      *   <li>长问题（> 12 字，完整句子）：语义充足、匹配精准，少召回（topkLong=8）即可，
@@ -349,8 +357,9 @@ public class KnowledgeBaseQueryService {
      * @return 向量检索参数
      */
     private SearchParams resolveSearchParams(String question) {
-        // 替换所有空格为无空格字符，计算紧凑长度
+        // 替换所有空白字符为空格字符，计算紧凑长度
         int compactLength = question.replaceAll("\\s+", "").length();
+        // 根据问题长度动态设置搜索参数
         if (compactLength <= shortQueryLength) {
             return new SearchParams(topkShort, minScoreShort);
         }
@@ -514,6 +523,7 @@ public class KnowledgeBaseQueryService {
                 },
                 // 上游异常：原样传递给下游（由调用方 onErrorResume 兜底）
                 sink::error,
+                // 上游正常结束：检查是否需要归一化
                 () -> {
                     // 上游正常结束
                     if (completed.get() || sink.isCancelled()) {
@@ -536,6 +546,11 @@ public class KnowledgeBaseQueryService {
         });
     }
 
+    /**
+     * 向量搜索参数
+     * @param topK
+     * @param minScore
+     */
     private record SearchParams(int topK, double minScore) {
     }
 
