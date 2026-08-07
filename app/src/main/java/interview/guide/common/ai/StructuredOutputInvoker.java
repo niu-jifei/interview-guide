@@ -29,18 +29,25 @@ public class StructuredOutputInvoker {
 3) 所有字符串内引号必须正确转义。
     """;
 
+    //======================指标埋点（Micrometer）========================
     /**
-     * 调用次数指标名称
+     * 调用次数指标
      */
     private static final String METRIC_INVOCATIONS = "app.ai.structured_output.invocations";
+
     /**
-     * 尝试次数指标名称
+     * 尝试次数指标
      */
     private static final String METRIC_ATTEMPTS = "app.ai.structured_output.attempts";
+
     /**
-     * 响应时间指标名称
+     * 响应时间指标
+     *
+     * latency 延迟指标
      */
     private static final String METRIC_LATENCY = "app.ai.structured_output.latency";
+
+
     private static final String STATUS_SUCCESS = "success";
     private static final String STATUS_FAILURE = "failure";
 
@@ -95,15 +102,19 @@ public class StructuredOutputInvoker {
             + PromptSecurityConstants.ANTI_INJECTION_INSTRUCTION;
         Exception lastError = null;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            // 构建重试系统提示
             String attemptSystemPrompt = attempt == 1
                 ? securedSystemPrompt
                 : buildRetrySystemPrompt(securedSystemPrompt, lastError);
+
             try {
                 String content = chatClient.prompt()
                     .system(attemptSystemPrompt)
                     .user(userPrompt)
                     .call()
                     .content();
+
+                // 转换并修复
                 T result = convertWithRepair(content, outputConverter, logContext, log);
                 recordAttempt(contextTag, STATUS_SUCCESS);
                 recordInvocation(contextTag, STATUS_SUCCESS, startNanos);
@@ -149,12 +160,15 @@ public class StructuredOutputInvoker {
             return outputConverter.convert(content);
         } catch (Exception firstError) {
             String repaired = repairUnescapedQuotesInJsonStrings(content);
+
+            // 有变化再次尝试解析
             if (!repaired.equals(content)) {
                 try {
                     T result = outputConverter.convert(repaired);
                     log.warn("{}结构化 JSON 存在未转义引号，已在本地修复后解析成功", logContext);
                     return result;
                 } catch (Exception repairError) {
+                    // 修复失败，保留原始错误信息
                     firstError.addSuppressed(repairError);
                 }
             }
@@ -164,6 +178,15 @@ public class StructuredOutputInvoker {
 
     /**
      * 修复 JSON 字符串中的未转义引号
+     * <p>
+     *  JSON 字符串中的引号必须转义，否则会导致 JSON 解析失败。
+     *  正确示例：
+     *  {"comment": "候选人提到"高并发"经验，但缺乏细节"}
+     *
+     *  {"comment": "候选人提到\"高并发\"经验，但缺乏细节"}
+     *
+     * </p>
+     *
      * @param content
      * @return
      */
@@ -173,6 +196,7 @@ public class StructuredOutputInvoker {
         }
         StringBuilder repaired = new StringBuilder(content.length() + 16);
         boolean inString = false;
+        // 逃离
         boolean escaping = false;
         for (int i = 0; i < content.length(); i++) {
             char ch = content.charAt(i);
@@ -267,6 +291,9 @@ public class StructuredOutputInvoker {
 
     /**
      * 记录尝试指标
+     *
+     * 每次尝试的成败计数
+     *
      * @param contextTag
      * @param status
      */
@@ -302,18 +329,29 @@ public class StructuredOutputInvoker {
 
     /**
      * 归一化上下文标签
+     * 转成安全的 Prometheus 标签值，防止标签基数爆炸和非法字符
+     *
      * @param raw
      * @return
      */
     private String normalizeContextTag(String raw) {
         String source = (raw == null || raw.isBlank()) ? "unknown" : raw;
+        // 转成小写，去掉前后空格，将空格替换为下划线
         String normalized = source.toLowerCase(Locale.ROOT).trim().replace(' ', '_');
+        // 去掉非法字符
         normalized = NON_ALNUM_PATTERN.matcher(normalized).replaceAll("_");
+        // 去掉连续的下划线
         normalized = MULTI_UNDERSCORE.matcher(normalized).replaceAll("_");
+        // 去掉前导和尾随的下划线
+        normalized = NON_ALNUM_PATTERN.matcher(normalized).replaceAll("_");
+        // 连续多个 _ 合并成一个
+        normalized = MULTI_UNDERSCORE.matcher(normalized).replaceAll("_");
+        // 去掉前导和尾随的下划线
         normalized = normalized.replaceAll("^_+|_+$", "");
         if (normalized.isBlank()) {
             normalized = "unknown";
         }
+        // 截断过长的标签
         if (normalized.length() > MAX_CONTEXT_TAG_LENGTH) {
             normalized = normalized.substring(0, MAX_CONTEXT_TAG_LENGTH);
         }

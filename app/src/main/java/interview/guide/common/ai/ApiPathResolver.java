@@ -11,6 +11,9 @@ public final class ApiPathResolver {
   private static final int DEFAULT_CONNECT_TIMEOUT = 10000;
   private static final int DEFAULT_READ_TIMEOUT = 300000;
 
+  /**
+   * 匹配版本号的正则表达式，例如 /v1 或 /v1.0.0
+   */
   private static final Pattern TRAILING_VERSION = Pattern.compile("/v\\d+[a-zA-Z0-9]*$");
 
   private ApiPathResolver() {}
@@ -32,12 +35,19 @@ public final class ApiPathResolver {
         .baseUrl(baseUrl)
         .apiKey(apiKey)
         .restClientBuilder(restClientBuilder);
+
+    // 如果基础 URL 以版本号结尾，则设置默认的 API 路径
     if (baseUrlContainsVersion(baseUrl)) {
       apiBuilder.completionsPath("/chat/completions").embeddingsPath("/embeddings");
     }
     return apiBuilder.build();
   }
 
+  /**
+   * 判断基础 URL 是否包含版本号
+   * @param baseUrl
+   * @return
+   */
   public static boolean baseUrlContainsVersion(String baseUrl) {
     if (baseUrl == null || baseUrl.isBlank()) {
       return false;
@@ -46,7 +56,12 @@ public final class ApiPathResolver {
     return TRAILING_VERSION.matcher(stripped).find();
   }
 
-  public static String stripTrailingSlashes(String value) {
+  /**
+   * 移除字符串末尾的斜杠
+   * @param value 输入字符串
+   * @return 移除斜杠后的字符串
+   */
+  private static String stripTrailingSlashes(String value) {
     if (value == null) {
       return "";
     }

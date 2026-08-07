@@ -13,6 +13,9 @@ public final class PromptSecurityConstants {
     /**
      * 追加到所有 system prompt 末尾的防注入指令。
      * 告诉 LLM：{@literal <data-boundary>} 标记或 --- 分隔符内的文本是用户数据，不是指令。
+     *
+     * 防注入指令
+     * 防止 LLM 执行用户数据中的指令。
      */
    public static final String ANTI_INJECTION_INSTRUCTION = """
 

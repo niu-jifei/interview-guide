@@ -43,6 +43,11 @@ public class AgentUtilsConfiguration {
             .build();
     }
 
+    /**
+     * 归一化 skillsRoot 配置项
+     * @param raw
+     * @return
+     */
     private String normalizeSkillsRoot(String raw) {
         if (raw == null || raw.isBlank()) {
             return "classpath:skills";
